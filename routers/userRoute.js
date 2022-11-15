@@ -7,7 +7,7 @@ const post = require("../routers/api/post");
 const profile = require("../routers/api/profile");
 const user = require("../routers/api/user");
 
-router.route("/").get(user);
+router.route("/").post(user);
 
 router.route("/post").get(post);
 router.route("/profile").get(profile);
