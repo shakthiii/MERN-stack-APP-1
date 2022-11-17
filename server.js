@@ -2,7 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const DB_Connection = require("./Database");
-const userRoute = require("./routers/userRoute");
+// const userRoute = require("./routers/userRoute");
 
 dotenv.config({ path: "./config.env" });
 
@@ -18,7 +18,13 @@ app.use(express.json());
 
 //Define routes
 
-app.use("/api/v1/users", userRoute);
+// app.use("/api/v1/users", userRouter);
+
+// Define Routes
+app.use("/api/v1/users", require("./routers/api/user"));
+app.use("/api/v1/auth", require("./routers/api/auth"));
+app.use("/api/v1/profile", require("./routers/api/profile"));
+app.use("/api/v1/posts", require("./routers/api/post"));
 
 //listening
 
