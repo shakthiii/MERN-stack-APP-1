@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { check, validationResult } = require("express-validator");
 
-// @route    get/api/v1/users/auth
+// @route    get/api/v1/auth
 // @desc     Authenticate route
 // @access   Protected
 

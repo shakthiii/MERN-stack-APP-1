@@ -1,19 +1,31 @@
 const express = require("express");
-const router = express.Router();
 const { check, validationResult } = require("express-validator");
+
+const router = express.Router();
+const auth = require("../../middleware/auth");
+const { authUser } = require("../../middleware/middleware");
+const Profile = require("../../models/ProfileModel");
+const User = require("../../models/UserModel");
+
 const gravatar = require("gravatar");
 const bcrypt = require("bcryptjs");
-const User = require("../../models/UserModel");
 const jwt = require("jsonwebtoken");
-const auth = require("../../middleware/auth");
 const UserSchema = require("../../schema/UserSchema");
 
-// @route    POST / api/v1/users
+// @route    GET / api/v1/admin
+// @desc     admin dashboard,
+// @access   Private
+
+router.get("/", auth, authUser, async (req, res) => {
+  res.send("Admin page");
+});
+
+// @route    POST / api/v1/admin/users/add
 // @desc     Register User.. => (create user),
 // @access   public
 
 router.post(
-  "/",
+  "/users/add",
   [
     check("name", "Name is required").not().isEmpty(),
     check("email", "Email is required").isEmail(),
@@ -173,7 +185,7 @@ router.post(
   }
 );
 
-// @route    PUT / api/v1/users/update/:user_id
+// @route    PATCH / api/v1/admin/update/:user_id
 // @desc     Update User,
 // @access   private
 
@@ -212,14 +224,29 @@ router.put("/update/:user_id", auth, async (req, res) => {
     });
   }
 });
+// @route    GET / api/v1/admin/users
+// @desc     Get all users,
+// @access   private
+router.get("/users", auth, async (req, res) => {
+  try {
+    const user = await User.find().select(" -avatar -__v -password");
+    res.json(user);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({
+      status: "Server error",
+      message: error,
+    });
+  }
+});
 
-// @route    DELETE / api/v1/users/delete
-// @desc     delete my account,
+// @route    GET / api/v1/admin/users
+// @desc     Get all users,
 // @access   private
 
-router.delete("/delete", auth, async (req, res) => {
+router.delete("/delete/:user_id", auth, async (req, res) => {
   try {
-    await User.findOneAndRemove({ _id: req.user.id });
+    await User.findOneAndRemove({ _id: req.params.user_id });
 
     res.status(201).json({ message: "user deleted successfully" });
   } catch (error) {

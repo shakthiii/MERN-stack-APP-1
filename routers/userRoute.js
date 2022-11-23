@@ -8,6 +8,7 @@ const myProfile = require("./api/profile/myProfile");
 const profile = require("./api/profile/profile");
 const CreateUser = require("../routers/api/user");
 const loginRoute = require("./api/loginAuth");
+const admin = require("./api/admin");
 
 router.route("/").post(CreateUser.createUser);
 
@@ -20,6 +21,7 @@ router
   .get(profile.getAllProfiles);
 router.route("/profile/me").get(myProfile);
 router.route("/auth").post(loginRoute).get(auth);
+router.route("/admin").get(admin);
 
 module.exports = router;
 

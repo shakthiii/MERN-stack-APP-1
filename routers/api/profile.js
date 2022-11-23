@@ -1,5 +1,7 @@
+const { response } = require("express");
 const express = require("express");
 const { check, validationResult } = require("express-validator");
+const request = require("request");
 
 const router = express.Router();
 const auth = require("../../middleware/auth");
@@ -182,9 +184,7 @@ router.delete("/", auth, async (req, res) => {
     //removing profile
     await Profile.findOneAndRemove({ user: req.user.id });
 
-    //removing user
-
-    await User.findOneAndRemove({ _id: req.user.id });
+    //removing user in user route
 
     //message
 
@@ -198,12 +198,12 @@ router.delete("/", auth, async (req, res) => {
   }
 });
 
-// @route    GET /api/v1/profile/experience
+// @route    PUT /api/v1/profile/experience/new
 // @desc     add profile experience
 // @access   private
 
 router.put(
-  "/experience",
+  "/experience/new",
   auth,
   [
     check("title", "title is required").not().isEmpty(),
@@ -245,12 +245,12 @@ router.put(
   }
 );
 
-// @route    PUT /api/v1/profile/experience/:exp_id
+// @route    PUT /api/v1/profile/experience/update/:exp_id
 // @desc     update experience details
 // @access   private
 
 router.put(
-  "/update/:ex_id",
+  "/experience/update/:ex_id",
   auth,
   [
     check("title", "title is required").not().isEmpty(),
@@ -298,11 +298,11 @@ router.put(
   }
 );
 
-// @route    DELETE /api/v1/profile/experience/:exp_id
+// @route    DELETE /api/v1/profile/experience/delete/:exp_id
 // @desc     Delete experience details
 // @access   private
 
-router.delete("/experience/:ex_id", auth, async (req, res) => {
+router.delete("/experience/delete/:ex_id", auth, async (req, res) => {
   try {
     let profile = await Profile.findOne({ user: req.user.id });
 
@@ -320,6 +320,171 @@ router.delete("/experience/:ex_id", auth, async (req, res) => {
     res.status(500).json({
       status: "Server error",
       message: error.message,
+    });
+  }
+});
+
+// @route    PUT /api/v1/profile/education/new
+// @desc     add profile education
+// @access   private
+
+router.put(
+  "/education/new",
+  auth,
+  [
+    check("school", "School name is required").not().isEmpty(),
+    check("degree", "Degree is required").not().isEmpty(),
+    check("fieldOfStudy", "Field of study is required").not().isEmpty(),
+    check("from", "from date is required").not().isEmpty(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { school, degree, fieldOfStudy, from, to, current, description } =
+      req.body;
+
+    const newEdu = {
+      school,
+      degree,
+      fieldOfStudy,
+      from,
+      to,
+      current,
+      description,
+    };
+
+    try {
+      const profile = await Profile.findOne({ user: req.user.id });
+      profile.education.unshift(newEdu);
+      await profile.save();
+
+      res.json({ profile });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        status: "Server error",
+        message: error,
+      });
+    }
+  }
+);
+
+// @route    PUT /api/v1/profile/education/update/:exp_id
+// @desc     update education details
+// @access   private
+
+router.put(
+  "/education/update/:ex_id",
+  auth,
+  [
+    check("school", "School name is required").not().isEmpty(),
+    check("degree", "Degree is required").not().isEmpty(),
+    check("fieldOfStudy", "Field of study is required").not().isEmpty(),
+    check("from", "from date is required").not().isEmpty(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { school, degree, fieldOfStudy, from, to, current, description } =
+      req.body;
+
+    const newExp = {
+      school,
+      degree,
+      fieldOfStudy,
+      from,
+      to,
+      current,
+      description,
+    };
+
+    try {
+      let profile = await Profile.findOne({ user: req.user.id });
+
+      //update education:
+
+      profile = await Profile.findOneAndUpdate(
+        { "education.id": req.params.ex_id },
+        { $set: { education: newExp } },
+        { new: true }
+      );
+      await profile.save();
+      res.send({ profile });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        status: "Server error",
+        message: error,
+      });
+    }
+  }
+);
+
+// @route    DELETE /api/v1/profile/education/delete/:exp_id
+// @desc     Delete education details
+// @access   private
+
+router.delete("/education/delete/:ex_id", auth, async (req, res) => {
+  try {
+    let profile = await Profile.findOne({ user: req.user.id });
+
+    //delete education:
+
+    profile = await Profile.findOneAndUpdate(
+      { "education.id": req.params.ex_id },
+      { $pull: { education: { _id: req.params.ex_id } } },
+      { new: true }
+    );
+    await profile.save();
+    res.send({ profile });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({
+      status: "Server error",
+      message: error.message,
+    });
+  }
+});
+
+// @route    GET /api/v1/profile/github/:userName
+// @desc     get github repos
+// @access   public
+
+router.get("/github/:user_name", async ({ params }, res) => {
+  try {
+    const options = {
+      uri: `https://api.github.com/users/${params.user_name}/repos?per_page=5&sort=created:asc&client_id=${process.env.GITHUB_CLIENT}&client_secret=${process.env.GITHUB_SECRET}`,
+      method: "GET",
+      headers: {
+        "user-agent": "node.js",
+      },
+    };
+    request(options, (error, response, body) => {
+      if (error) console.log(error.message);
+
+      if (response.statusCode !== 200) {
+        return res
+          .status(404)
+          .json({ errors: [{ message: "UserName not found!" }] });
+      }
+      res.send(JSON.parse(body));
+    });
+  } catch (err) {
+    console.log(err.message);
+    if (err.kind == "ObjectId") {
+      return res
+        .status(400)
+        .json({ errors: [{ message: "Profile not found!" }] });
+    }
+    res.status(500).json({
+      status: "Server error",
+      message: err,
     });
   }
 });

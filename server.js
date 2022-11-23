@@ -23,6 +23,7 @@ app.use(express.json());
 // Define Routes
 app.use("/api/v1/users", require("./routers/api/user"));
 app.use("/api/v1/auth", require("./routers/api/auth"));
+app.use("/api/v1/admin", require("./routers/api/admin"));
 app.use("/api/v1/profile", require("./routers/api/profile"));
 app.use("/api/v1/posts", require("./routers/api/post"));
 
