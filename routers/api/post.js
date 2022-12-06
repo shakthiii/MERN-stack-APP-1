@@ -1,6 +1,7 @@
 const express = require("express");
 const { check, validationResult } = require("express-validator");
-
+const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
 const auth = require("../../middleware/auth");
 const Profile = require("../../models/ProfileModel");
 const Post = require("../../models/PostModel");
@@ -115,6 +116,64 @@ router.delete("/delete/:post_id", auth, async (req, res) => {
       message: error.message,
       error: error,
     });
+  }
+});
+
+// @route    PUT /api/v1/users/posts/like/:post_id
+// @desc     like users posts by ID
+// @access   Private
+
+router.put("/like/:post_id", auth, async (req, res) => {
+  try {
+    const posts = await Post.findOne({ id: req.params.post_id });
+    // console.log(posts);
+
+    if (
+      posts.likes.filter((like) => like.user.toString() === req.user.id)
+        .length > 0
+    ) {
+      return res.status(400).json({ msg: "You already liked the post" });
+    } else {
+      posts.likes.unshift({ user: req.user.id });
+
+      posts.save();
+    }
+    res.json(posts.likes);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: "Server error",
+      message: error.message,
+      error: error,
+    });
+  }
+});
+
+router.put("/dislike/:post_id", auth, async (req, res) => {
+  try {
+    console.log(req.params.post_id);
+    const post = await Post.findOne({ id: req.params.post_id });
+
+    // console.log(post);
+
+    if (
+      post.likes.filter((like) => like.user.toString() === req.user.id)
+        .length === 0
+    ) {
+      return res.status(400).json({ msg: "Post has not yet been liked" });
+    } else {
+      const removeIndex = post.likes
+        .map((like) => like.user.toString())
+        .indexOf(req.user.id);
+      post.likes.splice(removeIndex, 1);
+    }
+
+    res.json(post.likes);
+
+    await post.save();
+  } catch (error) {
+    console.log(error.message);
+    res.json(error.message);
   }
 });
 
