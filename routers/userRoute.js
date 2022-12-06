@@ -14,7 +14,7 @@ router.route("/").post(CreateUser.createUser);
 
 //.get(getAllUsers);
 
-router.route("/post").get(post);
+router.route("/posts").get(post);
 router
   .route("/profile")
   .post(profile.createProfiles)

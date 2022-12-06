@@ -8,6 +8,8 @@ const jwt = require("jsonwebtoken");
 const auth = require("../../middleware/auth");
 const UserSchema = require("../../schema/UserSchema");
 
+const Profile = require("../../models/ProfileModel");
+
 // @route    POST / api/v1/users
 // @desc     Register User.. => (create user),
 // @access   public
@@ -181,6 +183,8 @@ router.put("/update/:user_id", auth, async (req, res) => {
   try {
     let user = await User.find({ _id: req.user.id });
 
+    // console.log(req.user);
+
     //update user,
 
     const { name, email, avatar, password, role } = req.body;
@@ -193,19 +197,29 @@ router.put("/update/:user_id", auth, async (req, res) => {
       role,
     };
 
-    if (user) {
+    console.log(user);
+
+    console.log(req.user.id);
+    console.log(req.params.user_id);
+
+    if (user && req.user.id === req.params.user_id) {
       user = await User.findOneAndUpdate(
         { _id: req.params.user_id },
         { $set: updateData },
         { new: true }
       );
+    } else {
+      console.log("user id and params id not match");
     }
+
+    console.log(user);
 
     await user.save();
 
     res.send({ user });
   } catch (error) {
     console.error(error.message);
+    console.log(error);
     res.status(500).json({
       status: "Server error",
       message: error,
@@ -219,7 +233,12 @@ router.put("/update/:user_id", auth, async (req, res) => {
 
 router.delete("/delete", auth, async (req, res) => {
   try {
-    await User.findOneAndRemove({ _id: req.user.id });
+    if (req.user.id === req.params.user_id) {
+      await User.findOneAndRemove({ _id: req.user.id });
+      await Profile.findOneAndRemove({ user: req.user.id });
+    } else {
+      console.log("req id and params id not match");
+    }
 
     res.status(201).json({ message: "user deleted successfully" });
   } catch (error) {
