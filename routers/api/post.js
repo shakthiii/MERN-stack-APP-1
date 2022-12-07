@@ -149,6 +149,10 @@ router.put("/like/:post_id", auth, async (req, res) => {
   }
 });
 
+// @route    PUT /api/v1/users/posts/like/:post_id
+// @desc     dislike users posts by ID
+// @access   Private
+
 router.put("/dislike/:post_id", auth, async (req, res) => {
   try {
     console.log(req.params.post_id);
@@ -172,8 +176,85 @@ router.put("/dislike/:post_id", auth, async (req, res) => {
 
     await post.save();
   } catch (error) {
-    console.log(error.message);
-    res.json(error.message);
+    console.log(error);
+    res.status(500).json({
+      status: "Server error",
+      message: error.message,
+      error: error,
+    });
+  }
+});
+
+// @route   POST api/posts/comment/:id
+// @desc    Comment on a post
+// @access  Private
+router.post(
+  "/comment/:id",
+  [auth, [check("text", "Text is not required").not().isEmpty()]],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findById(req.user.id).select("-password");
+      const post = await Post.findById(req.params.id);
+
+      const newComment = {
+        text: req.body.text,
+        name: user.name,
+        avatar: user.avatar,
+        user: req.user.id,
+      };
+
+      post.comments.unshift(newComment);
+
+      await post.save();
+      res.json(post.comments);
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).send("Server Error");
+    }
+  }
+);
+
+// @route   DELETE api/posts/comment/:id/:comment_id
+// @desc    Delete comment on a post
+// @access  Private
+router.delete("/comment/:id/:comment_id", auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    const comment = post.comments.find(
+      (comment) => comment.id === req.params.comment_id
+    );
+
+    if (!comment) {
+      return res.status(404).json({ msg: "Comment does not exist" });
+    }
+
+    if (comment.user_id.toString() !== req.user.id) {
+      // 401 - User Not Authorized
+      return res.status(401).json({ msg: "User not authorized" });
+    }
+
+    const removeIndex = post.comments
+      .map((comment) => comment.id)
+      .indexOf(req.params.comment_id);
+
+    post.comments.splice(removeIndex, 1);
+
+    await post.save();
+
+    res.json(post.comments);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      status: "Server error",
+      message: error.message,
+      error: error,
+    });
   }
 });
 
